@@ -101,7 +101,6 @@ private:
     void setPeriod(long microseconds);
     void initTimer(long microseconds);
     void stopTimer();
-    void calculateSpeed() ;
 	/// Arduino pin number assignments for the 2 or 4 pins required to interface to the
     /// stepper motor or driver
     uint8_t        _dirpin;
