@@ -4,7 +4,7 @@
 #include "stepperQ.h"
 
 
-AccelStepper1::AccelStepper1(uint8_t dirpin, uint8_t steppin)
+StepperQ::StepperQ(uint8_t dirpin, uint8_t steppin)
 {
     _currentPos = 0;
     _targetPos = 0;
@@ -31,7 +31,7 @@ AccelStepper1::AccelStepper1(uint8_t dirpin, uint8_t steppin)
 }
 
 
-void AccelStepper1::moveTo(long absolute)
+void StepperQ::moveTo(long absolute)
 {
     if (_targetPos != absolute)
     {
@@ -42,31 +42,58 @@ void AccelStepper1::moveTo(long absolute)
     }
 }
 
-void AccelStepper1::move(long relative)
+void StepperQ::move(long relative)
 {
     moveTo(_currentPos + relative);
 }
 
-long AccelStepper1::distanceToGo()
+long StepperQ::distanceToGo()
 {
     return _targetPos - _currentPos;
 }
 
-long AccelStepper1::targetPosition()
+long StepperQ::targetPosition()
 {
     return _targetPos;
 }
 
-long AccelStepper1::currentPosition()
+long StepperQ::currentPosition()
 {
     return _currentPos;
 }
 
 // Useful during initialisations or after initial positioning
 // Sets speed to 0
-void AccelStepper1::setCurrentPosition(long position)
+void StepperQ::setCurrentPosition(long position)
 {
     _targetPos = _currentPos = position;
     _n = 0;
     _stepInterval = 0;
 }
+
+void StepperQ::callback(){
+
+    stepUp();
+
+    stepDown();
+
+}
+
+void StepperQ:: stepUp() {
+
+// digitalWrite(_dirpin, _direction ==1 ? 1:0);	
+    digitalWrite(_steppin, HIGH);	
+}
+void StepperQ:: stepDown() {
+
+    digitalWrite(_steppin, LOW);	
+
+}
+
+void StepperQ::stop()
+{
+   // move(abs(_n));  
+   _direction ==1 ? abs(_n):-abs(_n);
+  
+}
+

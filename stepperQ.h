@@ -1,5 +1,5 @@
-#ifndef AccelStepper1_h
-#define AccelStepper1_h
+#ifndef StepperQ_h
+#define StepperQ_h
 
 #include <stdlib.h>
 #if ARDUINO >= 100
@@ -13,10 +13,10 @@
 #undef round
 
 
-class AccelStepper1
+class StepperQ
 {
 public:
-	AccelStepper1(uint8_t dirpin = 2, uint8_t steppin = 3);
+	StepperQ(uint8_t dirpin = 2, uint8_t steppin = 3);
     /// Set the target position. The run() function will try to move the motor
     /// from the current position to the target position set by the most
     /// recent call to this function. Caution: moveTo() also recalculates the speed for the next step. 
@@ -71,6 +71,8 @@ public:
 
     long stepsToStop();
 
+    void callback();
+
 protected:
 
     /// \brief Direction indicator
@@ -80,7 +82,14 @@ protected:
 	DIRECTION_CCW = -1,  ///< Clockwise
         DIRECTION_CW  = 1   ///< Counter-Clockwise
     } Direction;
-
+/// Called to execute a step. Only called when a new step is
+    /// required. Subclasses may override to implement new stepping
+    /// interfaces. The default calls step1(), step2(), step4() or step8() depending on the
+    /// number of pins defined for the stepper.
+    /// \param[in] step The current step phase number (0 to 7)
+    virtual void   stepUp();
+    virtual void   stepDown();
+    
 
 private:
 
@@ -92,7 +101,7 @@ private:
     /// The current absolution position in steps.
     long           _currentPos;    // Steps
 
-    /// The target position in steps. The AccelStepper1 library will move the
+    /// The target position in steps. The StepperQ library will move the
     /// motor from the _currentPos to the _targetPos, taking into account the
     /// max speed, acceleration and deceleration
     long           _targetPos;     // Steps
