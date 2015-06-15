@@ -154,11 +154,15 @@ void StepperQ::calculateSpeed() {
 
     Serial.print("\n n=");
     Serial.print(_n);
+   Serial.print(" _cn=");
+    Serial.print(_cn);
+
     if (distanceTo == 0 && _n <= 1)
     {
 	// We are at the target and its time to stop
 	_n = 0;
         stopTimer();
+     Serial.print(" Stopped");
 	return;
     }
      if (distanceTo > 0)
