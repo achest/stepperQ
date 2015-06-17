@@ -37,7 +37,7 @@ void StepperQ::init(uint8_t dirpin, uint8_t steppin)
 
     pinMode(_dirpin, OUTPUT);
     pinMode(_steppin, OUTPUT);
-    
+    _debug = false;
 }
 
 
@@ -107,6 +107,7 @@ void StepperQ::start(){
          setPeriod(_cn);
 	_n++;
 	 initTimer(_cn);
+	if (_debug) 
          Serial.print("\n first step"); 
        delayMicroseconds(_cmin); 
       stepDown();
@@ -152,17 +153,20 @@ void StepperQ::calculateSpeed() {
 
     long distanceTo = distanceToGo(); // +ve is clockwise from curent location
 
+if (_debug) {
     Serial.print("\n n=");
     Serial.print(_n);
    Serial.print(" _cn=");
     Serial.print(_cn);
-
+}
     if (distanceTo == 0 && _n <= 1)
     {
 	// We are at the target and its time to stop
 	_n = 0;
         stopTimer();
+     if (_debug) {
      Serial.print(" Stopped");
+ }
 	return;
     }
      if (distanceTo > 0)
@@ -217,8 +221,16 @@ void StepperQ::calculateSpeed() {
 //	Serial.print(_n);
 	// Subsequent step. Works for accel (n is +_ve) and decel (n is -ve).
 	_cn = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
+        _cn = max(_cn, _cmin);
+
 	_n++;
-    } else if (_n <= 0) {
+    }  else if (_n > 0 && _cn < _cmin) {  // speed was changed. Need no decel
+           
+	 	_cn = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
+		_n--;	    
+     }
+
+     else if (_n <= 0) {
 
 	_cn = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
 	_n++;
@@ -263,6 +275,12 @@ void StepperQ::stopTimer()
   TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12));          // clears all clock selects bits
 }
 
+
+void StepperQ::debug( boolean debug) {
+
+  _debug= debug;
+
+}
 
 
 

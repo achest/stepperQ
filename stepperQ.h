@@ -76,7 +76,7 @@ public:
     long stepsToStop();
 
     void isrCallback();	
-
+    void debug( boolean debug);
 protected:
 
     /// \brief Direction indicator
@@ -152,7 +152,7 @@ private:
 
 		//timer Vars
      unsigned char clockSelectBits;
-
+    boolean _debug;
 };
 
 extern StepperQ stepperq;
