@@ -91,8 +91,10 @@ void StepperQ:: stepDown() {
 
 void StepperQ::stop()
 {
-   // move(abs(_n));  
-   _direction ==1 ? abs(_n):-abs(_n);
+   if (_debug) 
+         Serial.print("\n StepperQ:stop"); 
+    move(abs(_n));  
+   //_direction ==1 ? abs(_n):-abs(_n);
   
 }
 
@@ -122,6 +124,12 @@ void StepperQ::setMaxSpeed(float speed)
         _stepsToStop = (long)((speed * speed) / (2.0 * _acceleration));
 
 }
+float StepperQ::maxSpeed() {
+   return _maxSpeed;
+}
+float StepperQ::speed() {
+   return 1000000.0/_cn;
+}
 
 void StepperQ::setAcceleration(float acceleration)
 {
@@ -140,6 +148,11 @@ void StepperQ::setAcceleration(float acceleration)
 long StepperQ::stepsToStop () {
 	return abs(_n);
 }
+long StepperQ::maxstepsToStop() {
+
+     return _stepsToStop ;
+}
+
 void StepperQ::isrCallback(){
 
    stepUp();
@@ -159,6 +172,7 @@ if (_debug) {
    Serial.print(" _cn=");
     Serial.print(_cn);
 }
+    float cnalt= _cn;
     if (distanceTo == 0 && _n <= 1)
     {
 	// We are at the target and its time to stop
@@ -222,11 +236,11 @@ if (_debug) {
 	// Subsequent step. Works for accel (n is +_ve) and decel (n is -ve).
 	_cn = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
         _cn = max(_cn, _cmin);
-
+	
 	_n++;
     }  else if (_n > 0 && _cn < _cmin) {  // speed was changed. Need no decel
            
-	 	_cn = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
+	 	_cn = _cn + ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
 		_n--;	    
      }
 
@@ -236,7 +250,9 @@ if (_debug) {
 	_n++;
 	}
 
-   
+   if (abs(cnalt - _cn )>1) {
+          setPeriod(_cn);
+    }
 
 
 }

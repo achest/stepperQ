@@ -39,6 +39,12 @@ public:
     /// Result in non-linear accelerations and decelerations.
     void    setMaxSpeed(float speed);
 
+    // returns MaxSpeed
+    float maxSpeed();
+    //return currentSpeed
+    float speed();
+
+ 
 /// Sets the acceleration and deceleration parameter.
     /// \param[in] acceleration The desired acceleration in steps per second
     /// per second. Must be > 0.0. This is an expensive call since it requires a square 
@@ -74,6 +80,7 @@ public:
 
     void start();
     long stepsToStop();
+    long maxstepsToStop();
 
     void isrCallback();	
     void debug( boolean debug);
