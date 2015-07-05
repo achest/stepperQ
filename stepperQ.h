@@ -154,11 +154,12 @@ private:
 
     /// Current direction motor is spinning in
     boolean _direction; // 1 == CW
-
+    /// Calculatet Steps to Stop. If the Max speed reaches.
     long _stepsToStop ;
 
-		//timer Vars
-     unsigned char clockSelectBits;
+    //timer Vars
+    unsigned char clockSelectBits;
+    /// set True für Debug output
     boolean _debug;
 };
 

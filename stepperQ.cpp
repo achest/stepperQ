@@ -250,9 +250,10 @@ if (_debug) {
 	_n++;
 	}
 
-   if (abs(cnalt - _cn )>1) {
-          setPeriod(_cn);
-    }
+  // if (abs(cnalt - _cn )>10) {
+  //        setPeriod(_cn);
+  //  }
+             setPeriod(_cn);
 
 
 }
