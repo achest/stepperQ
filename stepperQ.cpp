@@ -100,7 +100,7 @@ void StepperQ::stop()
 
 void StepperQ::start(){
 	
-  if (_n==0) { 
+  if (_n==0 && distanceToGo() != 0) { 
  
 	stepUp();
 	  _cn = _c0;
