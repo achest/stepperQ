@@ -153,7 +153,7 @@ private:
     //long  _cmin; // at max speed
 
     /// Current direction motor is spinning in
-    boolean _direction; // 1 == CW
+    int _direction; // 1 == CW
     /// Calculatet Steps to Stop. If the Max speed reaches.
     long _stepsToStop ;
 
