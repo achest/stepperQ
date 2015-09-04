@@ -101,11 +101,10 @@ void StepperQ::stop()
 void StepperQ::start(){
 	
   if (_n==0 && distanceToGo() != 0) { 
- 
-	stepUp();
-	  _cn = _c0;
+ 	  _cn = _c0;
 	_direction = (distanceToGo() > 0) ? DIRECTION_CW : DIRECTION_CCW;
 	 changeDirection() ;
+	 stepUp();
          setPeriod(_cn);
 	_n++;
 	 initTimer(_cn);
@@ -156,7 +155,7 @@ long StepperQ::maxstepsToStop() {
 void StepperQ::isrCallback(){
 
    stepUp();
-   _currentPos += DIRECTION_CW;
+   _currentPos += _direction;
    calculateSpeed();
 	
     stepDown();
