@@ -18,8 +18,23 @@
 
 class StepperQ
 {
+     /// \brief Symbolic names for number of pins.
+    /// Use this in the pins argument the AccelStepper1 constructor to 
+    /// provide a symbolic name for the number of pins
+    /// to use.
+    typedef enum
+    {
+	DRIVER    = 1, ///< Stepper Driver, 2 driver pins required
+	FULL2WIRE = 2, ///< 2 wire stepper, 2 motor pins required
+	FULL3WIRE = 3, ///< 3 wire stepper, such as HDD spindle, 3 motor pins required
+        FULL4WIRE = 4, ///< 4 wire full stepper, 4 motor pins required
+	HALF3WIRE = 6, ///< 3 wire half stepper, such as HDD spindle, 3 motor pins required
+	HALF4WIRE = 8  ///< 4 wire half stepper, 4 motor pins required
+    } MotorInterfaceType;
+
 public:
     void init(uint8_t dirpin = 2, uint8_t steppin = 3);
+    void init( uint8_t pin1 , uint8_t pin2 , uint8_t pin3,  uint8_t pin4,uint8_t interface = StepperQ::FULL4WIRE );
     /// Set the target position. The run() function will try to move the motor
     /// from the current position to the target position set by the most
     /// recent call to this function. Caution: moveTo() also recalculates the speed for the next step. 
@@ -74,6 +89,16 @@ public:
     /// \param[in] position The position in steps of wherever the motor
     /// happens to be right now.
     void    setCurrentPosition(long position);  
+
+    /// Sets the enable pin number for stepper drivers.
+    /// 0xFF indicates unused (default).
+    /// Otherwise, if a pin is set, the pin will be turned on when 
+    /// enableOutputs() is called and switched off when disableOutputs() 
+    /// is called.
+    /// \param[in] enablePin Arduino digital pin number for motor enable
+    /// \sa setPinsInverted
+    void    setEnablePin(uint8_t enablePin = 0xff);
+
 /// Sets a new target position that causes the stepper
     /// to stop as quickly as possible, using to the current speed and acceleration parameters.
     void stop();
@@ -84,6 +109,7 @@ public:
 
     void isrCallback();	
     void debug( boolean debug);
+    virtual int getDirection();
 protected:
 
     /// \brief Direction indicator
@@ -93,14 +119,64 @@ protected:
 	DIRECTION_CCW = -1,  ///< Clockwise
         DIRECTION_CW  = 1   ///< Counter-Clockwise
     } Direction;
-/// Called to execute a step. Only called when a new step is
+ /// Low level function to set the motor output pins
+    /// bit 0 of the mask corresponds to _pin[0]
+    /// bit 1 of the mask corresponds to _pin[1]
+    /// You can override this to impment, for example serial chip output insted of using the
+    /// output pins directly
+    virtual void   setOutputPins(uint8_t mask);
+    /// Called to execute a step. Only called when a new step is
     /// required. Subclasses may override to implement new stepping
     /// interfaces. The default calls step1(), step2(), step4() or step8() depending on the
     /// number of pins defined for the stepper.
     /// \param[in] step The current step phase number (0 to 7)
-    virtual void   stepUp();
-    virtual void   stepDown();
-     virtual void changeDirection();
+    virtual void   step(uint8_t first);
+   virtual void changeDirection();
+
+   
+
+   /// Called to execute a step on a stepper driver (ie where pins == 1). Only called when a new step is
+    /// required. Subclasses may override to implement new stepping
+    /// interfaces. The default sets or clears the outputs of Step pin1 to step, 
+    /// and sets the output of _pin2 to the desired direction. The Step pin (_pin1) is pulsed for 1 microsecond
+    /// which is the minimum STEP pulse width for the 3967 driver.
+    /// \param[in] step The current step phase number (0 to 7)
+    virtual void   step1(uint8_t step);
+
+    /// Called to execute a step on a 2 pin motor. Only called when a new step is
+    /// required. Subclasses may override to implement new stepping
+    /// interfaces. The default sets or clears the outputs of pin1 and pin2
+    /// \param[in] step The current step phase number (0 to 7)
+    virtual void   step2(long step);
+
+    /// Called to execute a step on a 3 pin motor, such as HDD spindle. Only called when a new step is
+    /// required. Subclasses may override to implement new stepping
+    /// interfaces. The default sets or clears the outputs of pin1, pin2,
+    /// pin3
+    /// \param[in] step The current step phase number (0 to 7)
+    virtual void   step3(long step);
+
+    /// Called to execute a step on a 4 pin motor. Only called when a new step is
+    /// required. Subclasses may override to implement new stepping
+    /// interfaces. The default sets or clears the outputs of pin1, pin2,
+    /// pin3, pin4.
+    /// \param[in] step The current step phase number (0 to 7)
+    virtual void   step4(long step);
+
+    /// Called to execute a step on a 3 pin motor, such as HDD spindle. Only called when a new step is
+    /// required. Subclasses may override to implement new stepping
+    /// interfaces. The default sets or clears the outputs of pin1, pin2,
+    /// pin3
+    /// \param[in] step The current step phase number (0 to 7)
+    virtual void   step6(long step);
+
+    /// Called to execute a step on a 4 pin half-steper motor. Only called when a new step is
+    /// required. Subclasses may override to implement new stepping
+    /// interfaces. The default sets or clears the outputs of pin1, pin2,
+    /// pin3, pin4.
+    /// \param[in] step The current step phase number (0 to 7)
+    virtual void   step8(long step);
+
 
 private:
  
@@ -109,10 +185,16 @@ private:
     void initTimer(long microseconds);
     void stopTimer();
     void calculateSpeed() ;
-	/// Arduino pin number assignments for the 2 or 4 pins required to interface to the
+    /// Number of pins on the stepper motor. Permits 2 or 4. 2 pins is a
+    /// bipolar, and 4 pins is a unipolar.
+    uint8_t        _interface= 1;          //  1, 2, 4, 8, See MotorInterfaceType
+
+    /// Arduino pin number assignments for the 2 or 4 pins required to interface to the
     /// stepper motor or driver
-    uint8_t        _dirpin;
-    uint8_t        _steppin;
+    uint8_t        _pin[4];
+
+  //  uint8_t        _dirpin;
+  //  uint8_t        _steppin;
 
 
  /// Enable pin for stepper driver, or 0xFF if unused.
@@ -153,7 +235,7 @@ private:
     //long  _cmin; // at max speed
 
     /// Current direction motor is spinning in
-    boolean _direction; // 1 == CW
+    int  _direction; // 1 == CW
     /// Calculatet Steps to Stop. If the Max speed reaches.
     long _stepsToStop ;
 
