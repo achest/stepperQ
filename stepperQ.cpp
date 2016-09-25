@@ -152,6 +152,12 @@ void StepperQ::setAcceleration(float acceleration)
 	_acceleration = acceleration;
     }
 }
+
+float StepperQ::getAcceleration() {
+	
+	return _acceleration;
+	
+	}
 long StepperQ::stepsToStop () {
 	return abs(_n);
 }
@@ -268,13 +274,22 @@ if (_debug) {
 
 void StepperQ::changeDirection()
 {
-   digitalWrite(_pin[1], _direction ==1 ? 1:0);
+	if (_reverse)  {
+		digitalWrite(_pin[1], _direction ==1 ? 0:1);
+	} else {
+		//Normal
+		digitalWrite(_pin[1], _direction ==1 ? 1:0);
+		}
 	
 }
 
 int StepperQ::getDirection()
 {
     return _direction;
+}
+void StepperQ::setDirOrder(boolean reverse ) {
+
+	_reverse =reverse ;
 }
 
 void StepperQ::setPeriod(long microseconds)

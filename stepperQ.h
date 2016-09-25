@@ -66,6 +66,10 @@ public:
     /// root to be calculated. Dont call more ofthen than needed
     void    setAcceleration(float acceleration);
 
+/// gets  the acceleration and deceleration parameter.
+    /// acceleration The desired acceleration in steps per second
+    float     getAcceleration();
+
     /// The distance from the current position to the target position.
     /// \return the distance from the current position to the target position
     /// in steps. Positive is clockwise from the current position.
@@ -99,6 +103,7 @@ public:
     /// \sa setPinsInverted
     void    setEnablePin(uint8_t enablePin = 0xff);
 
+	void setDirOrder(boolean reverse );
 /// Sets a new target position that causes the stepper
     /// to stop as quickly as possible, using to the current speed and acceleration parameters.
     void stop();
@@ -195,7 +200,7 @@ private:
 
   //  uint8_t        _dirpin;
   //  uint8_t        _steppin;
-
+	boolean _reverse;
 
  /// Enable pin for stepper driver, or 0xFF if unused.
     uint8_t        _enablePin;
