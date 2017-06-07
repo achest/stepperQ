@@ -115,6 +115,7 @@ void StepperQ::start(){
 	 step(HIGH);
          setPeriod(_cn);
 	_n++;
+	_currentPos += _direction;
 	 initTimer(_cn);
 	if (_debug) 
          Serial.print("\n first step"); 
@@ -167,6 +168,12 @@ long StepperQ::maxstepsToStop() {
 }
 
 void StepperQ::isrCallback(){
+
+	if (distanceToGo() == 0) {
+		_n = 0;
+        stopTimer();
+        return;
+	}
 
    step(HIGH);
    _currentPos += _direction;
