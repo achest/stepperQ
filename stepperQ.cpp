@@ -6,10 +6,21 @@
 
 StepperQ stepperq;              // preinstatiate
 
+
+
+#ifndef ESP8266
 ISR(TIMER1_OVF_vect)          // interrupt service routine that wraps a user defined function supplied by attachInterrupt
 {
   stepperq.isrCallback();
 }
+#else
+
+void inline timer0ISR(void){
+	
+  stepperq.isrCallback();	
+  
+}
+#endif 
 
 
 
@@ -44,12 +55,12 @@ void StepperQ::init(uint8_t pin1, uint8_t pin2,uint8_t pin3, uint8_t pin4,uint8_
 
 
     _interface = interface;
-
+    _pin[2] = pin3;
+    _pin[3] =  pin4;
     pinMode(_pin[2], OUTPUT);
     pinMode(_pin[3], OUTPUT);
-     _pin[2] = pin3;
-    _pin[3] =  pin4;
-    init (pin1,pin2);
+   
+    init (pin2,pin1);
     //Serial.print("\n init4"); 
     //Serial.print(_interface); 
 
@@ -129,7 +140,12 @@ void StepperQ::setMaxSpeed(float speed)
 {
 	_maxSpeed = speed;
 	_cmin = 1000000.0 / speed;
-        _stepsToStop = (long)((speed * speed) / (2.0 * _acceleration));
+    _stepsToStop = (long)((speed * speed) / (2.0 * _acceleration));
+        
+    if (_debug){
+		  Serial.print("\n _cmin = "); 
+		   Serial.print("_cmin"); 
+		}
 
 }
 float StepperQ::maxSpeed() {
@@ -187,10 +203,15 @@ void StepperQ::calculateSpeed() {
     long distanceTo = distanceToGo(); // +ve is clockwise from curent location
 
 if (_debug) {
-    Serial.print("\n n=");
+	Serial.print("\n m=");
+    Serial.print(millis());
+   
+    Serial.print(" _n=");
     Serial.print(_n);
    Serial.print(" _cn=");
     Serial.print(_cn);
+     Serial.print(" distanceTo=");
+    Serial.print(distanceTo);
 }
     float cnalt= _cn;
     if (distanceTo == 0 && _n <= 1)
@@ -205,20 +226,24 @@ if (_debug) {
     }
      if (distanceTo > 0)
     {
-	// We are anticlockwise from the target
-	// Need to go clockwise from here, maybe decelerate now
-	if (_n > 0)
-	{
-	    // Currently accelerating, need to decel now? Or maybe going the wrong way?
-	    if ((_n >= distanceTo) || _direction == DIRECTION_CCW)
-		_n = -_n ; // Start deceleration
-	}
-	else if (_n < 0)
-	{
-	    // Currently decelerating, need to accel again?
-	    if ((-_n < distanceTo) && _direction == DIRECTION_CW)
-		_n = -_n; // Start accceleration
-	}
+		// We are anticlockwise from the target
+		// Need to go clockwise from here, maybe decelerate now
+		if (_n > 0)
+		{
+			// Currently accelerating, need to decel now? Or maybe going the wrong way?
+			if ((_n >= distanceTo) || _direction == DIRECTION_CCW ) {
+				if (_debug)  Serial.print(" Start D ");
+				_n = -_n ; // Start deceleration
+			}
+		}
+		else if (_n < 0)
+		{
+			// Currently decelerating, need to accel again?
+			if ((-_n < distanceTo) && _direction == DIRECTION_CW) {
+			if (_debug)  Serial.print(" A  again");
+			_n = -_n; // Start accceleration
+			}
+		}
     }
     else if (distanceTo < 0)
     {
@@ -227,14 +252,18 @@ if (_debug) {
 	if (_n > 0)
 	{
 	    // Currently accelerating, need to decel now? Or maybe going the wrong way?
-	    if ((_n >= -distanceTo) || _direction == DIRECTION_CW)
+	    if ((_n >= -distanceTo) || _direction == DIRECTION_CW) {
+	    if (_debug)  Serial.print(" Start D ");
 		_n = -_n; // Start deceleration
+	    }
 	}
 	else if (_n < 0)
 	{
 	    // Currently decelerating, need to accel again?
-	    if ((-_n < -distanceTo) && _direction == DIRECTION_CCW)
+	    if ((-_n < -distanceTo) && _direction == DIRECTION_CCW) {
+			if (_debug)  Serial.print(" Start A ");
 		_n = -_n; // Start accceleration
+	}
 	}
     }
 
@@ -258,10 +287,12 @@ if (_debug) {
         _cn = max(_cn, _cmin);
 	
 	_n++;
+		if (_debug)  Serial.print(" a ");
     }  else if (_n > 0 && _cn < _cmin) {  // speed was changed. Need no decel
            
 	 	_cn = _cn + ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
-		_n--;	    
+		_n--;	   
+		if (_debug)  Serial.print(" D "); 
      }
 
      else if (_n <= 0) {
@@ -273,7 +304,7 @@ if (_debug) {
   // if (abs(cnalt - _cn )>10) {
   //        setPeriod(_cn);
   //  }
-             setPeriod(_cn);
+     setPeriod(_cn);
 
 
 }
@@ -301,30 +332,71 @@ void StepperQ::setDirOrder(boolean reverse ) {
 
 void StepperQ::setPeriod(long microseconds)
 {
-  long cycles = (F_CPU * microseconds) / 2000000;                                // the counter runs backwards after TOP, interrupt is at BOTTOM so divide microseconds by 2
-  if(cycles < RESOLUTION)              clockSelectBits = _BV(CS10);              // no prescale, full xtal
-  else if((cycles >>= 3) < RESOLUTION) clockSelectBits = _BV(CS11);              // prescale by /8
-  else if((cycles >>= 3) < RESOLUTION) clockSelectBits = _BV(CS11) | _BV(CS10);  // prescale by /64
-  else if((cycles >>= 2) < RESOLUTION) clockSelectBits = _BV(CS12);              // prescale by /256
-  else if((cycles >>= 2) < RESOLUTION) clockSelectBits = _BV(CS12) | _BV(CS10);  // prescale by /1024
-  else        cycles = RESOLUTION - 1, clockSelectBits = _BV(CS12) | _BV(CS10);  // request was out of bounds, set as maximum
-  ICR1 = cycles;                                                     // ICR1 is TOP in p & f correct pwm mode
-  TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12));
-  TCCR1B |= clockSelectBits;                                                     // reset clock select register
+  #ifndef ESP8266	 
+	
+	  long cycles = (F_CPU * microseconds) / 2000000;                                // the counter runs backwards after TOP, interrupt is at BOTTOM so divide microseconds by 2
+	  if(cycles < RESOLUTION)              clockSelectBits = _BV(CS10);              // no prescale, full xtal
+	  else if((cycles >>= 3) < RESOLUTION) clockSelectBits = _BV(CS11);              // prescale by /8
+	  else if((cycles >>= 3) < RESOLUTION) clockSelectBits = _BV(CS11) | _BV(CS10);  // prescale by /64
+	  else if((cycles >>= 2) < RESOLUTION) clockSelectBits = _BV(CS12);              // prescale by /256
+	  else if((cycles >>= 2) < RESOLUTION) clockSelectBits = _BV(CS12) | _BV(CS10);  // prescale by /1024
+	  else        cycles = RESOLUTION - 1, clockSelectBits = _BV(CS12) | _BV(CS10);  // request was out of bounds, set as maximum
+	  ICR1 = cycles;                                                     // ICR1 is TOP in p & f correct pwm mode
+	  TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12));
+	  TCCR1B |= clockSelectBits;                                                     // reset clock select register
+  #else
+	 timer0_write(ESP.getCycleCount() +clockCyclesPerMicrosecond()*microseconds);
+  #endif
 }
 
 void StepperQ::initTimer(long microseconds)
 {
-  TCCR1A = 0;                 // clear control register A 
-  TCCR1B = _BV(WGM13);        // set mode as phase and frequency correct pwm, stop the timer
-  if(microseconds > 0) setPeriod(microseconds);
-  TIMSK1 = _BV(TOIE1);                                     // sets the timer overflow interrupt enable bit
-  sei();                                                   // ensures that interrupts are globally enabled
-   TCCR1B |= clockSelectBits;
+  #ifndef ESP8266
+	
+	  TCCR1A = 0;                 // clear control register A 
+	  TCCR1B = _BV(WGM13);        // set mode as phase and frequency correct pwm, stop the timer
+	  if(microseconds > 0) setPeriod(microseconds);
+	  TIMSK1 = _BV(TOIE1);                                     // sets the timer overflow interrupt enable bit
+	  sei();                                                   // ensures that interrupts are globally enabled
+	   TCCR1B |= clockSelectBits;
+  #else
+	  timer0_isr_init();
+	  timer0_attachInterrupt(timer0ISR);
+	  setPeriod (microseconds);
+  #endif
 }
 void StepperQ::stopTimer()
-{
-  TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12));          // clears all clock selects bits
+{ 
+	#ifndef ESP8266
+	
+		TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12));          // clears all clock selects bits
+	#else
+	   timer0_detachInterrupt();
+  #endif	
+  
+  switch (_interface)
+    {
+	case DRIVER:
+	    step1(LOW);
+	    break;
+	case FULL2WIRE:
+	    setOutputPins(0b00);
+	    break;
+	case FULL3WIRE:
+	     setOutputPins(0b000);
+	    break;  
+	case FULL4WIRE:
+	     setOutputPins(0b0000);
+	    break;  
+	case HALF3WIRE:
+	    setOutputPins(0b000);
+	    break;  
+		
+	case HALF4WIRE:
+		setOutputPins(0b0000);
+	    break;  
+    }
+  
 }
 
 
@@ -392,11 +464,34 @@ void StepperQ::step(uint8_t first)
 void StepperQ::setOutputPins(uint8_t mask)
 {
     uint8_t numpins = 2;
-    if (_interface == FULL4WIRE || _interface == HALF4WIRE)
-	numpins = 4;
+    if (_interface == FULL4WIRE || _interface == HALF4WIRE) {
+		numpins = 4;
+    }
+	if (_interface == FULL3WIRE || _interface == HALF3WIRE)  {
+		numpins = 3;
+	}
     uint8_t i;
-    for (i = 0; i < numpins; i++)
-	digitalWrite(_pin[i], (mask & (1 << i)) ? (HIGH) : (LOW ));
+    
+    if (_debug) {
+    Serial.print("\n setOutputPins ");
+     Serial.print("mask ");
+    }
+	
+    
+    for (i = 0; i < numpins; i++) {
+		digitalWrite(_pin[i], (mask & (1 << i)) ? (HIGH) : (LOW ));
+	
+		if (_debug) {
+			
+		//Serial.print(" pin=");
+		//Serial.print(_pin[i]); 
+		Serial.print("  ");
+		Serial.print((mask & (1 << i)) ? (HIGH) : (LOW )); 
+    }
+	
+	
+	}
+	
 }
 
 
@@ -461,9 +556,10 @@ void StepperQ::step3(long step)
 // Subclasses can override
 void StepperQ::step4(long step)
 {
-
-   // Serial.print("step4"); 
-   // Serial.print(step); 
+	if (_debug) {
+    Serial.print("\n step4=");
+    Serial.print(step);
+    }
 
     switch (step & 0x3)
     {
