@@ -140,11 +140,12 @@ void StepperQ::setMaxSpeed(float speed)
 {
 	_maxSpeed = speed;
 	_cmin = 1000000.0 / speed;
+	_c0  = max(_c0,_cmin);
     _stepsToStop = (long)((speed * speed) / (2.0 * _acceleration));
         
     if (_debug){
 		  Serial.print("\n _cmin = "); 
-		   Serial.print("_cmin"); 
+		   Serial.print(_cmin); 
 		}
 
 }
@@ -166,6 +167,8 @@ void StepperQ::setAcceleration(float acceleration)
         _stepsToStop = (long)((_maxSpeed * _maxSpeed) / (2.0 * _acceleration));
 	// New c0 per Equation 7
 	_c0 = sqrt(2.0 / acceleration) * 1000000.0;
+	_c0  = max(_c0,_cmin);
+	
 	_acceleration = acceleration;
     }
 }
@@ -298,6 +301,7 @@ if (_debug) {
      else if (_n <= 0) {
 
 	_cn = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
+	if (_debug)  Serial.print(" C "); 
 	_n++;
 	}
 
@@ -305,7 +309,9 @@ if (_debug) {
   //        setPeriod(_cn);
   //  }
      setPeriod(_cn);
-
+if (_debug) { Serial.print(" _cn: "); 
+	  Serial.print(_cn);
+	}
 
 }
 
