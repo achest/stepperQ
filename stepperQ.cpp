@@ -38,11 +38,14 @@ void StepperQ::init(uint8_t dirpin, uint8_t steppin)
    
 
     // NEW
+    
     _n = 0;
     _c0 = 0.0;
     _cn = 0.0;
     _cmin = 1.0;
     _direction = DIRECTION_CCW;
+
+	TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12)); // brokly
 
     pinMode(_enablePin, OUTPUT);
 
@@ -111,8 +114,7 @@ void StepperQ::stop()
 {
    if (_debug) 
          Serial.print("\n StepperQ:stop"); 
-    move(abs(_n));  
-   //_direction ==1 ? abs(_n):-abs(_n);
+    move(_direction ==DIRECTION_CW ? abs(_n):-abs(_n));
   
 }
 
