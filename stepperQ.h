@@ -9,12 +9,17 @@
 #include <wiring.h>
 #endif
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
+#ifndef ESP8266
+  #include <avr/io.h>
+  #include <avr/interrupt.h>
+#endif
+
 #define RESOLUTION 65536    // Timer1 is 16 bit
 // These defs cause trouble on some versions of Arduino
 #undef round
 
+
+////#define DEBUG 1
 
 class StepperQ
 {
@@ -22,6 +27,7 @@ class StepperQ
     /// Use this in the pins argument the AccelStepper1 constructor to 
     /// provide a symbolic name for the number of pins
     /// to use.
+public:
     typedef enum
     {
 	DRIVER    = 1, ///< Stepper Driver, 2 driver pins required
@@ -32,7 +38,7 @@ class StepperQ
 	HALF4WIRE = 8  ///< 4 wire half stepper, 4 motor pins required
     } MotorInterfaceType;
 
-public:
+
     void init(uint8_t dirpin = 2, uint8_t steppin = 3);
     void init( uint8_t pin1 , uint8_t pin2 , uint8_t pin3,  uint8_t pin4,uint8_t interface = StepperQ::FULL4WIRE );
     /// Set the target position. The run() function will try to move the motor
@@ -65,6 +71,10 @@ public:
     /// per second. Must be > 0.0. This is an expensive call since it requires a square 
     /// root to be calculated. Dont call more ofthen than needed
     void    setAcceleration(float acceleration);
+
+/// gets  the acceleration and deceleration parameter.
+    /// acceleration The desired acceleration in steps per second
+    float     getAcceleration();
 
     /// The distance from the current position to the target position.
     /// \return the distance from the current position to the target position
@@ -99,6 +109,7 @@ public:
     /// \sa setPinsInverted
     void    setEnablePin(uint8_t enablePin = 0xff);
 
+	void setDirOrder(boolean reverse );
 /// Sets a new target position that causes the stepper
     /// to stop as quickly as possible, using to the current speed and acceleration parameters.
     void stop();
@@ -108,8 +119,10 @@ public:
     long maxstepsToStop();
 
     void isrCallback();	
-    void debug( boolean debug);
     virtual int getDirection();
+    
+    virtual void printStatus();
+    
 protected:
 
     /// \brief Direction indicator
@@ -124,6 +137,7 @@ protected:
     /// bit 1 of the mask corresponds to _pin[1]
     /// You can override this to impment, for example serial chip output insted of using the
     /// output pins directly
+    public:
     virtual void   setOutputPins(uint8_t mask);
     /// Called to execute a step. Only called when a new step is
     /// required. Subclasses may override to implement new stepping
@@ -133,6 +147,7 @@ protected:
     virtual void   step(uint8_t first);
    virtual void changeDirection();
 
+   
    
 
    /// Called to execute a step on a stepper driver (ie where pins == 1). Only called when a new step is
@@ -195,11 +210,11 @@ private:
 
   //  uint8_t        _dirpin;
   //  uint8_t        _steppin;
-
+	boolean _reverse;
 
  /// Enable pin for stepper driver, or 0xFF if unused.
     uint8_t        _enablePin;
-
+ 
 
     /// The current absolution position in steps.
     long           _currentPos;    // Steps
@@ -241,8 +256,7 @@ private:
 
     //timer Vars
     unsigned char clockSelectBits;
-    /// set True für Debug output
-    boolean _debug;
+   
 };
 
 extern StepperQ stepperq;
