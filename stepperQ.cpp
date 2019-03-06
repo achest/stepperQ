@@ -38,7 +38,6 @@ void StepperQ::init(uint8_t dirpin, uint8_t steppin)
    
 
     // NEW
-    
     _n = 0;
     _c0 = 0.0;
     _cn = 0.0;
@@ -51,7 +50,18 @@ void StepperQ::init(uint8_t dirpin, uint8_t steppin)
 
     pinMode(_pin[1], OUTPUT);
     pinMode(_pin[0], OUTPUT);
-    _debug = false;
+    
+    #ifdef DEBUG
+         Serial.print("\n StepperQ:init "); 
+         Serial.print(" dirPin:");
+         Serial.print(dirpin);
+         Serial.print(" StepPin :");
+         Serial.print(steppin);
+
+
+    #endif 
+    
+   
 }
 void StepperQ::init(uint8_t pin1, uint8_t pin2,uint8_t pin3, uint8_t pin4,uint8_t interface)
 {
@@ -112,8 +122,9 @@ void StepperQ::setCurrentPosition(long position)
 
 void StepperQ::stop()
 {
-   if (_debug) 
+	#ifdef DEBUG
          Serial.print("\n StepperQ:stop"); 
+    #endif     
     move(_direction ==DIRECTION_CW ? abs(_n):-abs(_n));
   
 }
@@ -130,8 +141,9 @@ void StepperQ::start(){
 	_n++;
 	_currentPos += _direction;
 	 initTimer(_cn);
-	if (_debug) 
+	#ifdef DEBUG
          Serial.print("\n first step"); 
+    #endif     
        delayMicroseconds(_cmin); 
       step(LOW);
   }
@@ -145,10 +157,13 @@ void StepperQ::setMaxSpeed(float speed)
 	_c0  = max(_c0,_cmin);
     _stepsToStop = (long)((speed * speed) / (2.0 * _acceleration));
         
-    if (_debug){
-		  Serial.print("\n _cmin = "); 
-		   Serial.print(_cmin); 
-		}
+    #ifdef DEBUG
+		Serial.print("\n setMaxSpeed _cmin = "); 
+		Serial.print(_cmin); 
+		Serial.print("_c0 = "); 
+		Serial.print(_c0); 
+		
+	#endif
 
 }
 float StepperQ::maxSpeed() {
@@ -173,6 +188,11 @@ void StepperQ::setAcceleration(float acceleration)
 	
 	_acceleration = acceleration;
     }
+     #ifdef DEBUG
+		Serial.print("\n setAcceleration _c0 = "); 
+		Serial.print(_c0); 
+		
+	#endif
 }
 
 float StepperQ::getAcceleration() {
@@ -207,22 +227,32 @@ void StepperQ::calculateSpeed() {
 
     long distanceTo = distanceToGo(); // +ve is clockwise from curent location
 
-	if (_debug) {
-		Serial.print("\n m=");
-		Serial.print(millis());
-		Serial.print(" _n=");
+	#ifdef DEBUG
+	//	Serial.print("\n m=");
+	//	Serial.print(millis());
+		Serial.print("\n calcSp  _currentPos: ");
+		Serial.print(_currentPos);
+		Serial.print(" _targetPos:");
+		Serial.print(_targetPos);
+		Serial.print(" _n:");
 		Serial.print(_n);
-	    Serial.print(" _cn=");
+		Serial.print(" _c0. ");
+		Serial.print(_c0);
+		Serial.print(" _cn:");
 		Serial.print(_cn);
-		Serial.print(" distanceTo=");
-		Serial.print(distanceTo);
-	}
+		
+		Serial.print(" _cmin:");
+		Serial.print(_cmin);
+	#endif
+	float _cnew = _cn;
     float cnalt= _cn;
     if (distanceTo == 0 && _n <= 1)    {
 		// We are at the target and its time to stop
 		_n = 0;
 		stopTimer();
-		if (_debug) { Serial.print(" Stopped"); }
+		#ifdef DEBUG 
+			Serial.print(" Stopped"); 
+		#endif
 		return;
     }
      if (distanceTo > 0)
@@ -233,7 +263,8 @@ void StepperQ::calculateSpeed() {
 		{
 			// Currently accelerating, need to decel now? Or maybe going the wrong way?
 			if ((_n >= distanceTo) || _direction == DIRECTION_CCW ) {
-				if (_debug)  Serial.print(" Start D ");
+				#ifdef DEBUG Serial.print(" Start D ");
+				#endif
 				_n = -_n ; // Start deceleration
 			}
 		}
@@ -241,7 +272,8 @@ void StepperQ::calculateSpeed() {
 		{
 			// Currently decelerating, need to accel again?
 			if ((-_n < distanceTo) && _direction == DIRECTION_CW) {
-			if (_debug)  Serial.print(" A  again");
+			#ifdef DEBUG Serial.print(" A  again");
+			#endif
 			_n = -_n; // Start accceleration
 			}
 		}
@@ -254,7 +286,8 @@ void StepperQ::calculateSpeed() {
 		{
 			// Currently accelerating, need to decel now? Or maybe going the wrong way?
 			if ((_n >= -distanceTo) || _direction == DIRECTION_CW) {
-			if (_debug)  Serial.print(" Start D ");
+			#ifdef DEBUG Serial.print(" Start D ");
+			#endif
 			_n = -_n; // Start deceleration
 			}
 		}
@@ -262,7 +295,8 @@ void StepperQ::calculateSpeed() {
 		{
 			// Currently decelerating, need to accel again?
 			if ((-_n < -distanceTo) && _direction == DIRECTION_CCW) {
-				if (_debug)  Serial.print(" Start A ");
+				#ifdef DEBUG Serial.print(" Start A ");
+				#endif
 			_n = -_n; // Start accceleration
 			}
 		}
@@ -275,38 +309,50 @@ void StepperQ::calculateSpeed() {
 		_cn = _c0;
 		_direction = (distanceTo > 0) ? DIRECTION_CW : DIRECTION_CCW;
 		changeDirection() ;
-			 setPeriod(_cn);
+			 setPeriod(max(_cn, _cmin));
 		_n++;
     }
     else  if (_n > 0 && _cn > _cmin ) {
 			// Subsequent step. Works for accel (n is +_ve) and decel (n is -ve).
-			_cn = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
-			_cn = max(_cn, _cmin);
-			_n++;
-			if (_debug)  Serial.print(" a ");
+			_cnew = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
+			if (_cnew > _cmin)   {
+			//_cn = max(_cn, _cmin);
+				_cn= _cnew;
+				_n++;
+			}
+			
+			#ifdef DEBUG 
+				Serial.print(" a ");
+			#endif
     }  else if (_n > 0 && _cn < _cmin) {  // speed was changed. Need no decel
            
 			_cn = _cn + ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
+			_cnew =_cn;
 			_n--;	   
-			if (_debug)  Serial.print(" D "); 
+			#ifdef  DEBUG 
+				Serial.print(" D "); 
+			#endif
      }
 
      else if (_n <= 0) {
 
 		_cn = _cn - ((2.0 * _cn) / ((4.0 * _n) + 1)); // Equation 13
-		
+		_cnew = _cn;
 	
-		if (_debug)  Serial.print(" C "); 
+		#ifdef DEBUG 
+			Serial.print(" C "); 
+		#endif
 		_n++;
 	}
 
   // if (abs(cnalt - _cn )>10) {
   //        setPeriod(_cn);
   //  }
-     setPeriod(_cn);
-if (_debug) { Serial.print(" _cn: "); 
-	  Serial.print(_cn);
-	}
+     setPeriod(max(_cnew, _cmin));
+	#ifdef DEBUG 
+		Serial.print(" _cn: "); 
+		Serial.print(_cn);
+	#endif
 
 }
 
@@ -473,23 +519,24 @@ void StepperQ::setOutputPins(uint8_t mask)
 	}
     uint8_t i;
     
-    if (_debug) {
-    Serial.print("\n setOutputPins ");
-     Serial.print("mask ");
-    }
+    #ifdef DEBUG
+		Serial.print("\n setOutputPins ");
+		Serial.print("mask ");
+   
+   
+    #endif
 	
     
     for (i = 0; i < numpins; i++) {
 		digitalWrite(_pin[i], (mask & (1 << i)) ? (HIGH) : (LOW ));
 	
-		if (_debug) {
+		#ifdef DEBUG
 			
 		//Serial.print(" pin=");
 		//Serial.print(_pin[i]); 
-		Serial.print("  ");
+		Serial.print("  "); 
 		Serial.print((mask & (1 << i)) ? (HIGH) : (LOW )); 
-    }
-	
+		#endif
 	
 	}
 	
@@ -557,10 +604,10 @@ void StepperQ::step3(long step)
 // Subclasses can override
 void StepperQ::step4(long step)
 {
-	if (_debug) {
-    Serial.print("\n step4=");
-    Serial.print(step);
-    }
+	#ifdef DEBUG
+		Serial.print("\n step4=");
+		Serial.print(step);
+    #endif
 
     switch (step & 0x3)
     {
@@ -657,4 +704,26 @@ void StepperQ::step8(long step)
     }
 }
 
-
+void StepperQ::printStatus() {
+	
+		Serial.print("\n StepperQ ");
+		Serial.print(" _currentPos: ");
+		Serial.print(_currentPos);
+		Serial.print(" _targetPos:");
+		Serial.print(_targetPos);
+		Serial.print(" _n:");
+		Serial.print(_n);
+		Serial.print(" _c0. ");
+		Serial.print(_c0);
+		Serial.print(" _cn:");
+		Serial.print(_cn);
+		
+		Serial.print(" _cmin:");
+		Serial.print(_cmin);
+		
+		Serial.print(" speed:");
+		Serial.print(speed());
+		
+		
+	}
+    

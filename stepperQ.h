@@ -19,6 +19,8 @@
 #undef round
 
 
+////#define DEBUG 1
+
 class StepperQ
 {
      /// \brief Symbolic names for number of pins.
@@ -117,8 +119,10 @@ public:
     long maxstepsToStop();
 
     void isrCallback();	
-    void debug( boolean debug);
     virtual int getDirection();
+    
+    virtual void printStatus();
+    
 protected:
 
     /// \brief Direction indicator
@@ -143,6 +147,7 @@ protected:
     virtual void   step(uint8_t first);
    virtual void changeDirection();
 
+   
    
 
    /// Called to execute a step on a stepper driver (ie where pins == 1). Only called when a new step is
@@ -209,7 +214,7 @@ private:
 
  /// Enable pin for stepper driver, or 0xFF if unused.
     uint8_t        _enablePin;
-
+ 
 
     /// The current absolution position in steps.
     long           _currentPos;    // Steps
@@ -251,8 +256,7 @@ private:
 
     //timer Vars
     unsigned char clockSelectBits;
-    /// set True für Debug output
-    boolean _debug;
+   
 };
 
 extern StepperQ stepperq;
