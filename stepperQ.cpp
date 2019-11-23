@@ -43,9 +43,9 @@ void StepperQ::init(uint8_t dirpin, uint8_t steppin)
     _cn = 0.0;
     _cmin = 1.0;
     _direction = DIRECTION_CCW;
-
-	TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12)); // brokly
-
+	#ifndef ESP8266
+		TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12)); // brokly
+	#endif 
     pinMode(_enablePin, OUTPUT);
 
     pinMode(_pin[1], OUTPUT);
@@ -447,11 +447,7 @@ void StepperQ::stopTimer()
 }
 
 
-void StepperQ::debug( boolean debug) {
 
-  _debug= debug;
-
-}
 void StepperQ::setEnablePin(uint8_t enablePin) {
 
     _enablePin = enablePin;
